@@ -17,9 +17,9 @@ from typing import Dict
 
 
 DATA_CONFIG = {
-    'train_dir': 'dataset/train',
-    'test_dir': 'dataset/test',
-    'output_dir': 'output',
+    'train_dir': '../../dataset_nd_resources/dataset/train',
+    'test_dir': '../../dataset_nd_resources/dataset/test',
+    'output_dir': '../../output',
 
     'source1_train': 'train_source1.tsv',
     'source2_train': 'train_source2.tsv',
