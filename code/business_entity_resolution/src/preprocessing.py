@@ -41,8 +41,13 @@ def normalize_text(value: object) -> str:
     # Normalize common whitespace characters.
     text = re.sub(r"\s+", " ", text)
 
-    # Remove whitespace around punctuation.
-    text = re.sub(r"\s*([,.;:/#&()\-])\s*", r"\1", text)
+    # Normalize whitespace around punctuation while keeping
+    # the punctuation readable in the primary representation.
+    text = re.sub(r"\s+([,.;:/#&()\-])", r"\1", text)
+    text = re.sub(r"([,.;:/#&()\-])(?=\S)", r"\1 ", text)
+
+    # Clean up any whitespace introduced above.
+    text = re.sub(r"\s+", " ", text)
 
     return text.strip()
 
@@ -114,25 +119,19 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Business name
     # -----------------------------------------------------------------------
 
-    result["name_norm"] = result["business_name"].map(normalize_text)
-
-    result["name_compact"] = result["business_name"].map(compact_text)
-
-    result["name_tokens"] = result["business_name"].map(tokenize)
+    result.loc[:, "name_norm"] = result["business_name"].map(normalize_text)
+    result.loc[:, "name_compact"] = result["business_name"].map(compact_text)
+    result.loc[:, "name_tokens"] = result["business_name"].map(tokenize)
 
     # -----------------------------------------------------------------------
     # Business address
     # -----------------------------------------------------------------------
 
-    result["address_missing"] = result["business_address"].isna()
-
-    result["address_norm"] = result["business_address"].map(normalize_text)
-
-    result["address_compact"] = result["business_address"].map(compact_text)
-
-    result["address_tokens"] = result["business_address"].map(tokenize)
-
-    result["address_numbers"] = result["business_address"].map(
+    result.loc[:, "address_missing"] = result["business_address"].isna()
+    result.loc[:, "address_norm"] = result["business_address"].map(normalize_text)
+    result.loc[:, "address_compact"] = result["business_address"].map(compact_text)
+    result.loc[:, "address_tokens"] = result["business_address"].map(tokenize)
+    result.loc[:, "address_numbers"] = result["business_address"].map(
         extract_numbers
     )
 
@@ -140,7 +139,7 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Country
     # -----------------------------------------------------------------------
 
-    result["country_norm"] = result["country"].map(normalize_text)
+    result.loc[:, "country_norm"] = result["country"].map(normalize_text)
 
     return result
 
@@ -171,10 +170,7 @@ def preprocess_file(
 
     # Convert empty strings in address to missing values.
     if "business_address" in df.columns:
-        df["business_address"] = df["business_address"].replace(
-            "",
-            pd.NA,
-        )
+        df.loc[df["business_address"].eq(""), "business_address"] = pd.NA
 
     processed = preprocess_dataframe(df)
 
@@ -182,6 +178,9 @@ def preprocess_file(
         parents=True,
         exist_ok=True,
     )
+
+    if output_path.exists():
+        print(f"Overwriting existing file: {output_path}")
 
     processed.to_parquet(
         output_path,
@@ -226,7 +225,7 @@ FILES = {
         OUTPUT_ROOT / "test_source2.parquet",
     ),
     "test_source3": (
-        DATASET_ROOT / "test" / "test_source3.parquet",
+        DATASET_ROOT / "test" / "test_source3.tsv",
         OUTPUT_ROOT / "test_source3.parquet",
     ),
 }
@@ -245,4 +244,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    input_path = DATASET_ROOT / "train" / "train_source1.tsv"
+    output_path = OUTPUT_ROOT / "train_source1_test.parquet"
+
+    preprocess_file(
+        input_path=input_path,
+        output_path=output_path,
+    )

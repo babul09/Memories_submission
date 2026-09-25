@@ -1,2 +1,3 @@
 *.pdf
 dataset_nd_resources/*
+output/processed/*
